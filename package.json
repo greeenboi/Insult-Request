@@ -1,13 +1,14 @@
 {
   "name": "github_app",
   "version": "1.0.0",
-  "description": "",
+  "description": "Best Way to Insult Prs",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "server": "node app.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Suvan GS",
   "license": "ISC",
   "dependencies": {
     "dotenv": "^16.4.5",
