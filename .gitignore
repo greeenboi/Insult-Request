@@ -3,3 +3,4 @@
 .env.local
 *.pem
 ./app.js
+.vercel
