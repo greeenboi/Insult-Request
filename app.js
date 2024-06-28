@@ -6,6 +6,8 @@ import {App} from "octokit";
 import {createNodeMiddleware} from "@octokit/webhooks";
 import fs from "fs";
 import http from "http";
+// const express = require('express');
+// const exp = express();
 
 // This reads your `.env` file and adds the variables from that file to the `process.env` object in Node.js.
 dotenv.config();
@@ -13,15 +15,15 @@ dotenv.config();
 // This assigns the values of your environment variables to local variables.
 const appId = process.env.APP_ID;
 const webhookSecret = process.env.WEBHOOK_SECRET;
-const privateKeyPath = process.env.PRIVATE_KEY_PATH;
+const privateKeyValue = process.env.PRIVATE_KEY_VALUE;
 
 // This reads the contents of your private key file.
-const privateKey = fs.readFileSync(privateKeyPath, "utf8");
+// const privateKey = fs.readFileSync(privateKeyPath, "utf8");
 
 // This creates a new instance of the Octokit App class.
 const app = new App({
   appId: appId,
-  privateKey: privateKey,
+  privateKey: privateKeyValue,
   webhooks: {
     secret: webhookSecret
   },
@@ -59,8 +61,28 @@ async function handlePullRequestOpened({octokit, payload}) {
   }
 };
 
+async function handleIssueOpened({octokit, payload}){
+  console.log(`Recieved a New Issue for ${payload.issue.number}`);
+
+  try {
+    await octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/comments", {
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: payload.issue.number,
+      body: messageForNewPRs,
+      headers: {
+      "x-github-api-version": "2022-11-28",
+      },
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+
 // This sets up a webhook event listener. When your app receives a webhook event from GitHub with a `X-GitHub-Event` header value of `pull_request` and an `action` payload value of `opened`, it calls the `handlePullRequestOpened` event handler that is defined above.
 app.webhooks.on("pull_request.opened", handlePullRequestOpened);
+app.webhooks.on("issues.opened", handleIssueOpened);
 
 // This logs any errors that occur.
 app.webhooks.onError((error) => {
@@ -71,7 +93,7 @@ app.webhooks.onError((error) => {
   }
 });
 
-// This determines where your server will listen.
+// exp.use(express.json());
 //
 // For local development, your server will listen to port 3000 on `localhost`. When you deploy your app, you will change these values. For more information, see "[Deploy your app](#deploy-your-app)."
 const port = 3000;
@@ -86,9 +108,10 @@ const localWebhookUrl = `http://${host}:${port}${path}`;
 //    - Check the signature of the incoming webhook event to make sure that it matches your webhook secret. This verifies that the incoming webhook event is a valid GitHub event.
 //    - Parse the webhook event payload and identify the type of event.
 //    - Trigger the corresponding webhook event handler.
+// const middleware = createNodeMiddleware(app.webhooks, {path});
+
 const middleware = createNodeMiddleware(app.webhooks, {path});
 
-// This creates a Node.js server that listens for incoming HTTP requests (including webhook payloads from GitHub) on the specified port. When the server receives a request, it executes the `middleware` function that you defined earlier. Once the server is running, it logs messages to the console to indicate that it is listening.
 http.createServer(middleware).listen(port, () => {
   console.log(`Server is listening for events at: ${localWebhookUrl}`);
   console.log('Press Ctrl + C to quit.')
